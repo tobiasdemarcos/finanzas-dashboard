@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanzas De Marcos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg:#f7f6f2;--surface:#fff;--surface2:#f0ede8;--text:#1a1a18;--text2:#6b6b67;--text3:#9b9b96;
+    --border:rgba(0,0,0,0.08);--green:#2d6a4f;--green-bg:#d8f3dc;--red:#9b2335;--red-bg:#fde8ea;
+    --blue:#1a3a6b;--blue-bg:#dbeafe;--amber:#7c4a00;--amber-bg:#fef3c7;--accent:#1a3a6b;--radius:12px;
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --bg:#16161a;--surface:#1e1e24;--surface2:#26262e;--text:#e8e8e2;--text2:#9a9a94;--text3:#5a5a58;
+    --border:rgba(255,255,255,0.08);--green:#6fcf97;--green-bg:#0d2e1a;--red:#f28b82;--red-bg:#2e0d10;
+    --blue:#93c5fd;--blue-bg:#0d1a2e;--amber:#fcd34d;--amber-bg:#2e1d00;
+  }}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;}
+  .logo{font-size:15px;font-weight:600;letter-spacing:-.3px;}
+  .logo span{color:var(--text2);font-weight:400;}
+  .last-updated{font-size:11px;color:var(--text3);}
+  main{max-width:1100px;margin:0 auto;padding:1.5rem 2rem 3rem;}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem;}
+  .metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem;}
+  .metric-label{font-size:11px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+  .metric-value{font-size:26px;font-weight:600;letter-spacing:-1px;line-height:1;}
+  .metric-sub{font-size:11px;color:var(--text3);margin-top:5px;}
+  .green{color:var(--green);}.red{color:var(--red);}.blue{color:var(--blue);}
+  .grid-2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;}
+  .card-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .chart-wrap{position:relative;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{padding:4px 12px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;cursor:pointer;transition:all .15s;}
+  .chip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;}
+  .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);}
+  .legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+  .tx-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .tx-table th{text-align:left;padding:6px 10px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);font-size:11px;}
+  .tx-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+  .tx-table tr:last-child td{border-bottom:none;}
+  .tx-table tr:hover td{background:var(--surface2);}
+  .tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;white-space:nowrap;}
+  .tag-gasto{background:var(--red-bg);color:var(--red);}
+  .tag-ingreso{background:var(--green-bg);color:var(--green);}
+  .tag-cuota{background:var(--amber-bg);color:var(--amber);}
+  .tag-efectivo{background:var(--blue-bg);color:var(--blue);}
+  .tag-trans{background:var(--surface2);color:var(--text2);}
+  .cuota-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);align-items:center;font-size:12px;}
+  .cuota-row:last-child{border-bottom:none;}
+  .progress-bar{height:4px;background:var(--surface2);border-radius:99px;margin-top:3px;overflow:hidden;}
+  .progress-fill{height:100%;border-radius:99px;}
+  #loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;}
+  .spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @media(max-width:768px){main{padding:1rem;}.metrics{grid-template-columns:repeat(2,1fr);}.grid-2{grid-template-columns:1fr;}header{padding:0 1rem;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Finanzas De Marcos <span>/ Dashboard</span></div>
+  <div class="last-updated" id="last-updated">Cargando...</div>
+</header>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:var(--text2);">Leyendo planilla de Google Sheets...</div>
+</div>
+
+<main id="main-content" style="display:none;">
+  <div class="metrics" id="metrics-row"></div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">
+        Gastos por categoría
+        <div class="chips" id="cat-chips">
+          <span class="chip active" data-filter="all">Todos</span>
+          <span class="chip" data-filter="Gasto">Gastos</span>
+          <span class="chip" data-filter="Cuota">Cuotas</span>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:300px;"><canvas id="catChart" role="img" aria-label="Gastos por categoría"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Por tarjeta / fuente</div>
+      <div class="legend" id="tarjeta-legend"></div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="tarjetaChart" role="img" aria-label="Distribución por tarjeta"></canvas></div>
+      <div id="tarjeta-totals" style="margin-top:12px;"></div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Cuotas a vencer — próximos meses</div>
+      <div class="legend" id="cuotas-legend"></div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="cuotasChart" role="img" aria-label="Cuotas a vencer"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Cuotas vigentes</div>
+      <div id="cuotas-list"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">
+      Transacciones
+      <input type="text" id="tx-search" placeholder="Buscar..." style="font-size:12px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);width:180px;">
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="tx-table">
+        <thead><tr><th>Fecha</th><th>Descripción</th><th>Fuente</th><th>Categoría</th><th style="text-align:right;">Monto</th><th>Tipo</th></tr></thead>
+        <tbody id="tx-body"></tbody>
+      </table>
+    </div>
+    <div id="tx-count" style="font-size:11px;color:var(--text3);margin-top:10px;text-align:right;"></div>
+  </div>
+</main>
+
+<script>
+const SHEET_ID = '1U5yyUFuQNQozteCZdXaqFpAD5DGey4ck5PDDmt7JqAg';
+const COLORS = {'Galicia MC Platinum':'#E85D04','Galicia Visa Éminent':'#3A86FF','Brubank 6230':'#00b4a6','Brubank 8012':'#00b4a6','Brubank':'#00b4a6','Mercado Pago':'#009EE3'};
+
+// Google Sheets gviz endpoint — works cross-origin from any host including file://
+function gvizUrl(gid) {
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${gid}`;
+}
+
+async function fetchSheet(gid) {
+  const res = await fetch(gvizUrl(gid));
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const text = await res.text();
+  // Strip google's JSONP wrapper: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
+  const json = text.replace(/^[^{]*/, '').replace(/\);?\s*$/, '');
+  return JSON.parse(json);
+}
+
+function cellVal(c) {
+  if (!c) return '';
+  if (c.v === null || c.v === undefined) return '';
+  return c.v;
+}
+
+function parseMoney(v) {
+  if (typeof v === 'number') return v;
+  if (!v) return 0;
+  const s = String(v).replace(/[^0-9.,-]/g,'').replace(/\./g,'').replace(',','.');
+  return parseFloat(s) || 0;
+}
+
+function fmtPeso(n, compact=false) {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (compact) {
+    if (abs >= 1000000) return sign + '$' + (abs/1000000).toFixed(1) + 'M';
+    if (abs >= 1000)    return sign + '$' + (abs/1000).toFixed(0) + 'k';
+  }
+  return sign + '$' + Math.round(abs).toLocaleString('es-AR');
+}
+
+function parseTxSheet(data) {
+  const rows = data.table.rows;
+  const txs = [];
+  // Row 0 is the emoji title, row 1 is headers — start from row 2
+  for (let i = 2; i < rows.length; i++) {
+    const r = rows[i].c;
+    if (!r || !r[0] || !r[0].v) continue;
+    const fecha = r[0].v;
+    if (typeof fecha !== 'string' || !fecha.match(/^\d{4}/)) continue;
+    txs.push({
+      fecha,
+      fuente:   String(cellVal(r[1])),
+      desc:     String(cellVal(r[2])),
+      cat:      String(cellVal(r[4])),
+      subcat:   String(cellVal(r[5])),
+      monto:    parseMoney(cellVal(r[6])),
+      montoUSD: parseMoney(cellVal(r[7])),
+      tipo:     String(cellVal(r[8])),
+    });
+  }
+  return txs;
+}
+
+function parseCuotasSheet(data) {
+  const rows = data.table.rows;
+  const cuotas = [], proyeccion = [];
+  let mode = 'cuotas';
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i].c;
+    if (!r || !r[0] || !r[0].v) continue;
+    const v0 = String(r[0].v);
+    if (v0.includes('PROYECCI')) { mode = 'proy'; continue; }
+    if (v0 === 'Descripción' || v0 === 'Tarjeta' || v0.includes('TOTAL COMPROMETIDO')) continue;
+    if (mode === 'cuotas' && r[4] && r[4].v) {
+      cuotas.push({ desc:v0, tarjeta:String(cellVal(r[1])), cuotaActual:+cellVal(r[2])||0, total:+cellVal(r[3])||0, monto:parseMoney(cellVal(r[4])), rest:+cellVal(r[6])||0 });
+    }
+    if (mode === 'proy' && v0 !== 'TOTAL') {
+      proyeccion.push({ tarjeta:v0, meses: r.slice(1).map(c => parseMoney(cellVal(c))) });
+    }
+  }
+  return { cuotas, proyeccion };
+}
+
+let allTxs = [];
+let catChartInst, tarjetaChartInst, cuotasChartInst;
+
+function buildMetrics(txs) {
+  const gastos   = txs.filter(t=>['Gasto','Cuota','Efectivo'].includes(t.tipo)&&t.monto>0).reduce((s,t)=>s+t.monto,0);
+  const ingresos = txs.filter(t=>t.tipo==='Ingreso'&&t.monto>0).reduce((s,t)=>s+t.monto,0);
+  const cuotas   = txs.filter(t=>t.tipo==='Cuota'&&t.monto>0).reduce((s,t)=>s+t.monto,0);
+  const balance  = ingresos - gastos;
+  document.getElementById('metrics-row').innerHTML = `
+    <div class="metric"><div class="metric-label">Ingresos</div><div class="metric-value green">${fmtPeso(ingresos,true)}</div><div class="metric-sub">${txs.filter(t=>t.tipo==='Ingreso').length} entradas</div></div>
+    <div class="metric"><div class="metric-label">Gastos totales</div><div class="metric-value red">${fmtPeso(gastos,true)}</div><div class="metric-sub">${txs.filter(t=>['Gasto','Cuota'].includes(t.tipo)).length} transacciones</div></div>
+    <div class="metric"><div class="metric-label">Solo cuotas</div><div class="metric-value blue">${fmtPeso(cuotas,true)}</div><div class="metric-sub">Del total de gastos</div></div>
+    <div class="metric"><div class="metric-label">Balance</div><div class="metric-value ${balance>=0?'green':'red'}">${fmtPeso(balance,true)}</div><div class="metric-sub">${balance>=0?'Positivo':'Negativo'} este período</div></div>`;
+}
+
+function buildCatChart(txs, filter) {
+  const cats = {};
+  txs.filter(t => filter==='all'?['Gasto','Cuota','Efectivo'].includes(t.tipo):t.tipo===filter)
+     .forEach(t=>{ if(t.monto>0) cats[t.cat]=(cats[t.cat]||0)+t.monto; });
+  const sorted = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,14);
+  const h = Math.max(260, sorted.length*26+60);
+  document.getElementById('catChart').parentNode.style.height = h+'px';
+  if(catChartInst) catChartInst.destroy();
+  catChartInst = new Chart(document.getElementById('catChart'),{
+    type:'bar',
+    data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>Math.round(e[1])),backgroundColor:'#3A86FF',borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtPeso(ctx.raw)}}},
+      scales:{x:{ticks:{callback:v=>fmtPeso(v,true),font:{size:10}},grid:{color:'rgba(128,128,128,0.08)'}},y:{ticks:{font:{size:10}},grid:{display:false}}}}
+  });
+}
+
+function buildTarjetaChart(txs) {
+  const g = {};
+  txs.filter(t=>['Gasto','Cuota','Efectivo'].includes(t.tipo)&&t.monto>0)
+     .forEach(t=>{ const k=t.fuente.startsWith('Brubank')?'Brubank':t.fuente; g[k]=(g[k]||0)+t.monto; });
+  const labels=Object.keys(g), data=labels.map(l=>Math.round(g[l])), colors=labels.map(l=>COLORS[l]||'#888');
+  document.getElementById('tarjeta-legend').innerHTML=labels.map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${colors[i]}"></div>${l}</div>`).join('');
+  document.getElementById('tarjeta-totals').innerHTML=labels.map((l,i)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2)">${l}</span><span style="font-weight:500">${fmtPeso(data[i])}</span></div>`).join('');
+  if(tarjetaChartInst) tarjetaChartInst.destroy();
+  tarjetaChartInst = new Chart(document.getElementById('tarjetaChart'),{
+    type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtPeso(ctx.raw)}}}}
+  });
+}
+
+function buildCuotasChart(proyeccion) {
+  if(!proyeccion.length) return;
+  const meses=['Mayo-26','Jun-26','Jul-26','Ago-26','Sep-26','Oct-26','Nov-26'];
+  const colorMap={'Galicia MC Platinum':'#E85D04','Galicia Visa Éminent':'#3A86FF','Brubank':'#00b4a6'};
+  const datasets=proyeccion.map(p=>({label:p.tarjeta,data:p.meses.slice(0,meses.length).map(Math.round),backgroundColor:colorMap[p.tarjeta]||'#888',borderRadius:3,borderSkipped:false}));
+  document.getElementById('cuotas-legend').innerHTML=datasets.map(d=>`<div class="legend-item"><div class="legend-dot" style="background:${d.backgroundColor}"></div>${d.label}</div>`).join('');
+  if(cuotasChartInst) cuotasChartInst.destroy();
+  cuotasChartInst = new Chart(document.getElementById('cuotasChart'),{
+    type:'bar',data:{labels:meses,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+fmtPeso(ctx.raw)}}},
+      scales:{x:{stacked:true,ticks:{font:{size:10}},grid:{display:false}},y:{stacked:true,ticks:{callback:v=>fmtPeso(v,true),font:{size:10}},grid:{color:'rgba(128,128,128,0.08)'}}}}
+  });
+}
+
+function buildCuotasList(cuotas) {
+  const el=document.getElementById('cuotas-list');
+  el.innerHTML=cuotas.filter(c=>c.rest>0).slice(0,8).map(c=>{
+    const pct=Math.round((c.cuotaActual/c.total)*100);
+    const col=c.rest<=2?'#6fcf97':c.rest<=6?'#3A86FF':'#E85D04';
+    return `<div class="cuota-row">
+      <div><div style="font-size:12px;font-weight:500">${c.desc}</div><div style="font-size:10px;color:var(--text3)">${c.tarjeta.replace('Galicia ','').replace(' Éminent','')}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div></div>
+      <div style="font-size:11px;color:var(--text2);text-align:right">${c.cuotaActual}/${c.total}</div>
+      <div style="font-size:12px;font-weight:500;text-align:right;white-space:nowrap">${fmtPeso(c.monto)}</div>
+    </div>`;
+  }).join('');
+}
+
+function buildTxTable(txs, filter='') {
+  const filtered = filter ? txs.filter(t=>[t.desc,t.fuente,t.cat,t.tipo].join(' ').toLowerCase().includes(filter.toLowerCase())) : txs;
+  const sorted = [...filtered].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const tagClass={Gasto:'tag-gasto',Ingreso:'tag-ingreso',Cuota:'tag-cuota',Efectivo:'tag-efectivo',Transferencia:'tag-trans',Devolución:'tag-ingreso'};
+  document.getElementById('tx-body').innerHTML=sorted.map(t=>{
+    const montoStr=t.monto?fmtPeso(t.monto):(t.montoUSD?'U$S '+t.montoUSD.toFixed(2):'-');
+    const color=t.tipo==='Ingreso'||t.tipo==='Devolución'?'var(--green)':'var(--text)';
+    return `<tr>
+      <td style="color:var(--text3);white-space:nowrap">${t.fecha.slice(5)}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.desc}</td>
+      <td style="color:var(--text2);font-size:11px">${t.fuente}</td>
+      <td style="color:var(--text2);font-size:11px">${t.cat}</td>
+      <td style="text-align:right;font-weight:500;color:${color};white-space:nowrap">${montoStr}</td>
+      <td><span class="tag ${tagClass[t.tipo]||'tag-trans'}">${t.tipo}</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tx-count').textContent=`${filtered.length} transacciones`;
+}
+
+async function init() {
+  try {
+    // GIDs: Transacciones=0, Categorias=199474344, Resumen=136233414, Cuotas=auto-detect
+    // Fetch Transacciones (gid=0) and Cuotas Vigentes
+    const [txData, cuotasData] = await Promise.all([
+      fetchSheet(0),
+      fetchSheet(1012818024)
+    ]);
+
+    allTxs = parseTxSheet(txData);
+    const { cuotas, proyeccion } = parseCuotasSheet(cuotasData);
+
+    document.getElementById('loading').style.display='none';
+    document.getElementById('main-content').style.display='block';
+    document.getElementById('last-updated').textContent='Actualizado: '+new Date().toLocaleString('es-AR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+
+    buildMetrics(allTxs);
+    buildCatChart(allTxs,'all');
+    buildTarjetaChart(allTxs);
+    buildCuotasChart(proyeccion);
+    buildCuotasList(cuotas);
+    buildTxTable(allTxs);
+
+    document.getElementById('cat-chips').addEventListener('click',e=>{
+      if(!e.target.classList.contains('chip')) return;
+      document.querySelectorAll('#cat-chips .chip').forEach(c=>c.classList.remove('active'));
+      e.target.classList.add('active');
+      buildCatChart(allTxs, e.target.dataset.filter);
+    });
+    let t; document.getElementById('tx-search').addEventListener('input',e=>{clearTimeout(t);t=setTimeout(()=>buildTxTable(allTxs,e.target.value),200);});
+
+  } catch(err) {
+    document.getElementById('loading').innerHTML=`
+      <div style="text-align:center;padding:2rem;color:var(--text2)">
+        <p style="font-size:15px;margin-bottom:8px">Error al cargar la planilla</p>
+        <p style="font-size:12px;margin-bottom:16px">${err.message}</p>
+        <p style="font-size:11px">Verificá que la planilla esté compartida como "Cualquier persona con el link puede ver"</p>
+      </div>`;
+    console.error(err);
+  }
+}
+init();
+</script>
+</body>
+</html>
